@@ -1,61 +1,53 @@
 # 영은의 하루툰 🌷
 
-달력으로 모아보는 그림일기. 그림과 일기 내용은 이 공개 저장소에 들어 있지 않습니다.
+GitHub Pages에서 Google Drive의 비공개 그림일기를 달력으로 읽습니다. 개인 글·그림·토큰은 저장소에 넣지 않습니다. Sites는 사용하지 않습니다.
 
-## 홈페이지 열기
+## Google 연결 설정
 
-GitHub 저장소의 **Settings → Pages → Build and deployment**에서:
+1. Google Cloud Console에 하루툰 소유 계정으로 로그인하고 `하루툰` 프로젝트를 만듭니다.
+2. 해당 프로젝트에서 Google Drive API를 사용 설정합니다.
+3. Google Auth Platform에서 앱 이름·지원 이메일·개발자 이메일을 설정합니다. 기관 내부용으로 만들 수 있으면 Internal을 선택합니다. External / Testing을 사용할 경우 하루툰 소유 계정만 테스트 사용자로 추가합니다. 기관 정책으로 차단될 경우 기관 관리자의 앱 승인이 필요할 수 있습니다.
+4. Data Access에 `openid`, `https://www.googleapis.com/auth/userinfo.email`, `https://www.googleapis.com/auth/drive.readonly` 범위를 추가합니다. Drive 읽기 권한은 전체 Drive에 적용되며 폴더만으로 제한되는 권한은 아닙니다. 앱은 설정된 하루툰 폴더와 그 안의 diaries/images만 조회합니다.
+5. Clients에서 Web application OAuth 클라이언트를 만듭니다. Authorized JavaScript origins: `https://youngeun0023-ux.github.io` (경로 없이). 이 앱은 GIS 팝업 토큰 방식이므로 리디렉션 URI는 필요하지 않습니다.
+6. 홈페이지의 연결 설정에 공개 클라이언트 ID를 입력합니다. 다른 기기에서도 설정 없이 이용하려면 `config.js`의 `googleClientId`에 같은 공개 ID를 기입합니다. Client secret은 만들거나 제출하지 않습니다.
+7. Google로 로그인하고 Drive 읽기 동의를 완료합니다. 계정 이메일이 `config.js`의 allowedEmail과 일치하고 Google이 이메일을 검증했을 때만 기록을 읽습니다.
 
-1. Source: **Deploy from a branch**
-2. Branch: **main**, Folder: **/(root)**
-3. **Save**
+실제 로그인과 API 연결은 OAuth 클라이언트 생성 후 확인해야 합니다. Testing 모드와 기관 정책에 따라 재동의가 필요할 수 있습니다.
 
-배포가 끝나면 https://youngeun0023-ux.github.io/harutoon/ 에 접속합니다.
-GitHub Pages 자체는 공개 화면이지만, OneDrive에 저장된 일기는 로그인한 사용자만 읽습니다.
+## 저장 형식
 
-## 학교 OneDrive 연결
+하루툰 루트 또는 `diaries` 하위에 `YYYY-MM-DD.json`을 저장합니다. 그림은 루트 또는 `images` 하위에 PNG/JPEG/WebP로 저장합니다.
 
-학교 계정에서 앱 등록이나 사용자 동의가 허용되어야 합니다. 차단되어 있다면 학교 Microsoft 365 담당자의 도움이 필요합니다. 학교 저장소를 사용할 수 있는 기간과 정책도 확인해주세요.
+```json
+{
+  "format": "harutoon-entry",
+  "version": 1,
+  "title": "오늘의 제목",
+  "story": "오늘 있었던 일",
+  "mood": "😊 행복해",
+  "imageId": "GOOGLE_DRIVE_IMAGE_FILE_ID",
+  "updatedAt": "2026-10-06T12:00:00Z"
+}
+```
 
-1. [Microsoft Entra 관리센터](https://entra.microsoft.com/)에 학교 계정으로 로그인합니다.
-2. **Identity → Applications → App registrations → New registration**을 엽니다.
-3. 이름: `Harutoon`. 계정 유형: **이 조직 디렉터리의 계정만**(단일 테넌트).
-4. Redirect URI 플랫폼: **Single-page application (SPA)**.
-5. URI: `https://youngeun0023-ux.github.io/harutoon/` (마지막 `/` 포함).
-6. 등록 후 **Application (client) ID**와 **Directory (tenant) ID**를 복사합니다.
-7. **API permissions → Add a permission → Microsoft Graph → Delegated permissions → Files.ReadWrite**를 추가합니다. 앱에서 사용자 프로필을 읽지 않으므로 기본 User.Read는 필요 없습니다. Application 권한은 쓰지 않습니다.
-8. 홈페이지의 **연결 설정**에 두 ID를 입력하고 저장합니다.
-9. **학교 OneDrive 연결**을 누르고 Microsoft 로그인·권한 동의를 진행합니다.
+그림은 imageId로 연결하거나 `imageFile`에 해당 폴더 내 그림 파일명을 기록합니다. 이전 백업의 PNG/JPEG/WebP data URL인 `image`도 읽습니다. 날짜별 1개 기록이며 동일 날짜가 중복되면 오류로 알립니다.
 
-클라이언트 비밀(client secret)은 만들거나 입력하지 않습니다. 암호·토큰은 GitHub에 올리지 않습니다.
-Files.ReadWrite는 로그인한 사용자의 파일을 읽고 쓸 수 있는 권한입니다. 이 앱의 코드는 OneDrive의 `Harutoon/diaries`, `Harutoon/images` 폴더만 사용하지만, Microsoft 권한 자체가 폴더에 한정되지는 않습니다.
-권한 목록이 제대로 설정되어 있어도 학교의 사용자 동의 제한으로 관리자 승인이 필요할 수 있습니다.
+홈페이지는 읽기 및 전체 백업 기능을 제공합니다. 글·그림 저장은 ChatGPT의 Google Drive 연결로 수행하며, 저장 후 홈페이지에서 새로고침합니다. 자동 동기화나 홈페이지에서의 편집·삭제 기능은 없습니다.
 
-두 ID는 공개 식별자이며 비밀번호가 아닙니다. 각 기기에서 연결 설정에 입력하거나 `config.js`에 ID만 기입하면 기기별 설정을 줄일 수 있습니다.
+## 이전 OneDrive 기록 이전
 
-## 기존 일기 옮기기
+`onedrive-backup.html`은 기존 OneDrive 앱과 설정을 보존한 이전용 화면입니다. 기존 OneDrive 또는 기존 브라우저 기록을 불러와 전체 백업 JSON을 받습니다. OneDrive 기록은 먼저 OneDrive로 연결해야 백업됩니다. 기존 브라우저 기록만 백업하려면 OneDrive를 연결하지 않습니다.
 
-기존 HTML에서 **백업**을 누르거나, 전달받은 `하루툰_기존기록_2026-10-04_06.json`을 사용합니다. 이 파일에는 개인 그림과 글이 포함되니 공개 저장소에 올리지 않습니다.
+백업을 ChatGPT 대화에 첨부하고 하루툰 Google Drive로 옮겨달라고 요청합니다. 그림까지 포함된 백업인지 확인한 뒤, 날짜별 JSON과 그림을 Google Drive로 업로드하고 홈페이지에서 확인합니다. 기존 날짜의 기록은 확인 없이 덮어쓰지 않으며 OneDrive 원본은 삭제하지 않습니다. 이전 화면의 OneDrive imageId를 Google Drive imageId로 복사해서는 안 됩니다. 그림 바이트를 먼저 다운로드하고 Google Drive의 새 ID로 연결해야 합니다.
 
-- OneDrive로 옮길 때: 먼저 **학교 OneDrive 연결** → **일기 가져오기** → 백업 JSON 선택.
-- 브라우저 안에 보관할 때: OneDrive 연결 없이 **일기 가져오기**.
-- 다른 기기: 홈페이지를 열고 같은 앱 ID와 학교 계정으로 로그인하면 같은 일기를 불러옵니다.
+## 개인정보와 로그인
 
-기존 날짜는 가져오기에서 건너뜁니다. 가져오는 중 실패하면 다시 같은 파일을 가져오면 남은 날짜를 진행합니다. 그림은 긴 변 1600px, JPEG로 압축합니다.
+GitHub Pages의 화면·소스는 공개입니다. 일기 내용은 비공개 Google Drive에서 Google API의 인증·파일 권한 검사 후 전달됩니다. 화면의 이메일 검사만이 보안 경계는 아닙니다. Drive 폴더를 다른 사람이나 링크에 공유하지 마세요.
 
-## 저장·동기화 동작
+토큰은 메모리에만 저장합니다. 페이지 재접속 시 다시 로그인해야 합니다. 토큰 만료·로그아웃 때 화면과 그림 Blob URL을 지웁니다. 로컬 저장소에는 공개 클라이언트 ID만 저장합니다. 이전용 OneDrive 화면은 기존 브라우저 저장소와 Microsoft 세션을 사용합니다.
 
-- 연결 전: IndexedDB에 저장합니다. 브라우저 데이터 삭제 시 사라질 수 있으므로 백업해주세요.
-- 연결 후: 날짜별 JSON과 별도 그림 파일을 OneDrive에 저장합니다. HTML 크기는 일기 수에 따라 늘어나지 않습니다.
-- 다른 기기 변경을 볼 때: **새로고침**. 실시간 공동 편집은 아닙니다.
-- 동시 수정: OneDrive ETag로 변경 충돌을 감지하고 덮어쓰기를 막습니다. 충돌 시 작성 내용을 복사해 두고 취소 → 새로고침 → 다시 수정합니다.
-- 그림을 교체하거나 일기를 삭제해도 이전 그림 파일은 OneDrive에 남습니다. 실패한 업로드의 그림도 남을 수 있습니다. 삭제 실수 방지를 위해 자동 정리는 하지 않습니다.
-- 로그아웃은 앱의 인증 정보를 이 탭에서 지우고 브라우저 로컬 일기로 돌아갑니다. Microsoft 전체 계정을 로그아웃하는 기능은 아닙니다.
-- 원격 로그인 토큰은 이 탭의 sessionStorage에 보관합니다. 로그인은 OAuth 2.0 PKCE 방식이며, 외부 JS 라이브러리에 의존하지 않습니다.
-- 백업 JSON에는 저장된 모든 그림과 글이 들어갑니다. 작성 중인 미저장 내용은 포함되지 않습니다. 기록이 많으면 백업 파일도 커집니다.
+## 검증
 
-## 검증 범위
+문법 검사와 모의 DOM/API에서 로그인 전 기록 숨김, 다른 계정 거부, 정상 계정의 달력 표시, 로그아웃 후 제거, 토큰 미저장을 확인했습니다. 실제 브라우저의 그림 표시 검사는 OAuth 설정 후 진행합니다. 실제 Google OAuth와 실제 OneDrive 이전은 사용자 설정·백업 확보 후 별도로 확인합니다.
 
-JavaScript 문법 검사, 모의 IndexedDB의 저장·읽기·삭제, OneDrive API 모의 응답의 저장·충돌 방지, OAuth state 불일치 거부를 확인했습니다. 실제 브라우저 화면과 실제 학교 계정 연결은 아직 검증되지 않았습니다. 실제 학교 계정 로그인·권한 승인과 실제 OneDrive 업로드는 앱 등록 완료 후 확인해야 합니다.
-
-공식 참고: [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site), [Microsoft OAuth PKCE](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow), [Graph 권한](https://learn.microsoft.com/en-us/graph/permissions-reference), [업로드 세션](https://learn.microsoft.com/en-us/graph/api/driveitem-createuploadsession).
+공식 참고: https://developers.google.com/identity/oauth2/web/guides/use-token-model · https://developers.google.com/workspace/drive/api/guides/api-specific-auth
